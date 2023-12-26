@@ -1,0 +1,327 @@
+---
+title: "compstats2"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+
+Problem 1
+ Let q(·) be a proposal density for rejection sampling of the target distribution
+π(·). Let a(x) := (1/A)*(π(x)/q(x)) ≤ 1 be the corresponding acceptance probability function at point x.
+a) Calculate the expected acceptance probability E(a(X)) of a sample X ∼ q(·).
+$$
+E(a(X))=P(AUq(X)\le\pi(X))=\int P(U\le \frac{\pi(x)}{Aq(x)}|X=x)q(x) \; dx =\int \frac{\pi(x)}{Aq(x)}q(x) \; dx =1/A\int \pi(x) \; dx 
+$$
+
+b) Calculate the expected number of samples from q(·) until the first acceptance.
+ The number of times N that we need iterate the algorithm until the first acceptance is itself a random variable and has a geometric distribution where the probability that the first success occurs on the nth sample is
+$$
+ P(N = n) = (1−p)^{n-1}p  
+$$
+The mean of the random variable (the expected number of samples required to get the first success) is below, where p is our acceptance probability a(x)
+$$
+E(N)=1/p=1/a(x)=(\frac{\pi(x)}{Aq(x)})^{-1}=\frac{Aq(x)}{\pi(x)}
+$$
+
+c) What conditions need to be imposed on q(·) to maximize the expected acceptance probability?
+We want q(x) to be as close as possible to π(x), assuming π is normalized and A is close to 1. 
+
+
+Problem 2
+
+a) Use
+A =((1/α)+(1/exp(1))/Γ(α) (envelope constant)
+α1 = exp(1)/(α + exp(1))
+α2 = 1 − α1
+and implement a rejection sampling mechanism in R (In the exercise meeting we will
+show that this is the optimal choice for α1, α2 and A).
+Hint: To draw x from the mixture α1 · q1(x) + α2 · q2(x) of two densities q1 and q2, first
+choose qi with probability αi, i = 1, 2 and then draw x from qi. To draw from qi, you can
+use the R-function runif and the probability integral transform.
+
+q1(x) ∝ x^(α−1)· 1(0,1](x) and
+q2(x) ∝ exp(−x) · 1(1,∞)(x)
+Both q1 and q2 when integrated over x should equal 1, as they are density functions, this way we
+can solve for q1 and q2. For some constants c and d
+q1(x)=c* x^(α−1)· 1(0,1](x) and
+q2(x)=d*exp(−x) · 1(1,∞)(x)
+
+Below we solve for q1(x)
+$$
+q1(x)=c* x^{α−1}· 1_{(0,1]}(x)
+\\
+\int_{-\infty}^{\infty} c* x^{α−1}· 1_{(0,1]}(x)\;dx=1
+\\
+c\int_{0}^{1}  x^{α−1}\;dx=1
+\\
+c(1/α)|_{0}^{1}x^{α}=1
+\\
+c(1/α)(1^{α}-0)=1
+\\
+c/α=1
+\\c=α
+\\
+q1(x)=α x^{α−1}· 1_{(0,1]}(x)
+$$
+Below we solve for q2(x)
+$$
+q2(x)=d* e^{-x}· 1_{(1,\infty)}(x)
+\\
+\int_{-\infty}^{\infty} d* e^{-x}· 1_{(1,\infty)}(x)\;dx=1
+\\
+d\int_{1}^{\infty}  e^{-x}\;dx=1
+\\
+-d|_{1}^{\infty}e^{-x}=1
+\\
+-d(e^{-\infty}-e^{-1})=1
+\\
+de^{-1}=1
+\\d=e
+\\
+q2(x)=e^{-x+1}· 1_{(1,\infty)}(x)
+$$
+Now we will calculate the cdfs for q1 and q2 from the density functions calculated above 
+Where the cdf is the density function integrated from -infinity to x.
+We start with finding the cdf for q1(x) and then its inverse
+$$
+F(x)=\int_{-\infty}^{x}f(t)\;dt
+\\
+F(x)=\int_{-\infty}^{x}q1(t)\;dt
+\\
+F(x)=\int_{-\infty}^{x}α t^{α−1}· 1_{(0,1]}(t)\;dt
+\\
+F(x)=\int_{0}^{x}α t^{α−1}\;dt
+\\
+F(x)=|_{0}^{x}t^{α}=(x^α-0^α)=x^α
+\\
+F^{-1}(x)=x^{1/α}
+$$
+Now we find the cdf for q2(x) and calculate its inverse
+$$
+F(x)=\int_{-\infty}^{x}f(t)\;dt
+\\
+F(x)=\int_{-\infty}^{x}q2(t)\;dt
+\\
+F(x)=\int_{-\infty}^{x}e^{-t+1}· 1_{(1,\infty)}(t)\;dt
+\\
+F(x)=\int_{1}^{x}e^{-t+1}\;dt
+\\
+F(x)=-|_{1}^{x}e^{-t+1}=-(e^{-x+1}-e^{0})=-e^{-x+1}+1
+\\
+F^{-1}(x)=-ln(-x+1)+1
+$$
+Now we will use these inverses to perform the PIT(probability integral transform) to get our functions for q1 and q2. 
+From script:Often one considers a(x) := (π(x)/Aq(x)) ≤ 1, which can be interpreted as acceptance
+probability . The rejection method can therefore be summarized as follows:
+Draw a realization x from q(·) and accept x with probability a(x) otherwise continue drawing.
+Theorem 1.20. Let X ∼ π(·) and q(·) such that (1.7) is satisfied. Let x be a realization
+from q(·) and u a realization from U[0, 1]. If x satisfies
+Auq(x) ≤ π(x),
+then accept the proposal x as a value generated from π(·). If x is not accepted, repeat
+the procedure until you accept the proposal. An accepted proposal is then a realization
+from the distribution π.
+
+
+Here our π(x) is the density function f(x; α, 1) = (x^(α−1)*exp(−x))/Γ(α), x > 0
+
+```{r}
+
+myq1 <- function(x,alpha){
+return(x^(1/alpha)) 
+  }
+myq2 <- function(x){
+return(-log(-x+1)+1) 
+  }
+
+
+rejsample<-function(R,alpha){
+  alpha1<- exp(1)/(alpha+exp(1))
+  alpha2<- 1-alpha1
+  Amat<-((1/alpha)+(1/exp(1)))/gamma(alpha) #gamma function is Γ(α) 
+  
+  out <- rep(NA, R) # initialize output vector of length R
+  
+  for (i in 1:R){
+  counter<-0
+  while(counter==0){
+  x<-runif(1)
+  
+  # #below is what i had originally, doesnt work as well
+  # #draw x from q1 and q2
+  # q1<-myq1(x,alpha)
+  # q2<-myq2(x)
+  # #draw x from q
+  # q<-(q1*alpha1)+(q2*alpha2)
+  
+  #heres the new attempt
+  qprob<-runif(1)
+  if (qprob<=alpha1){
+  q<-myq1(x,alpha)
+  }
+  else{
+  q<-myq2(x)
+  }
+  
+  fpi<-(x^(alpha−1)*exp(−x))/gamma(alpha)
+  u<-runif(1)
+  auq<-Amat*u*q
+
+  if(auq <=fpi ){
+    out[i] <- q
+    counter<-1
+  }
+  }
+  }
+  return(out)
+}  
+    
+
+alpha<-.5
+
+set.seed(123)
+mysample <- rejsample(100000, alpha)
+plot(density(mysample),  main = "Sample density and true density values (red)")
+x <- seq(0, 10, length=100000)
+lines(x,(x^(alpha−1)*exp(−x))/gamma(alpha),col="red",lty=2)
+
+
+
+```
+
+b) Generate n = 100000 random numbers from G(0.5, 1). Verify that your program functions
+correctly by comparing the sample (kernel) density estimate to the true density function. 
+Shown above
+
+
+Problem 3
+
+a) Implement this method and the Box-M¨uller algorithm in R and test which of both generators performs faster for n = 100000. Use R function system.time for time measurement.
+Verify your function by comparing kernel and true densities as in Problem 2.
+Hint: To draw jointly uniform distributed random values on the surface {u^2 + v^2 ≤ 1},
+you can draw u and v independently from a Uniform(-1,1) (using in R runif(1, -1,
+1)) and accept the sample if u^2 + v^2 ≤ 1.
+
+
+From script: 
+Theorem 1.12 (Box and M¨uller (1958)). If U1 and U2 are independent U[0, 1] random
+variables, then
+X1 := sqrt(−2*log(U1))*cos(2πU2) and X2 := sqrt(−2*log(U1))*sin(2πU2)
+are independent N(0, 1) random variables.
+
+```{r}
+#new method
+newmethod<-function(R){
+  out <- rep(NA, R) # initialize output vector of length R
+  
+  for (i in seq(1, R, 2)){
+  counter<-0
+  while(counter==0){
+  u<-runif(1,-1,1)
+  v<-runif(1,-1,1)
+  sumuv<- (u^2)+(v^2)
+  if (sumuv<=1){
+  counter<-1
+  }
+  }
+  x<-(u/sqrt(sumuv))*sqrt(-2*log(sumuv))
+  y<-(v/sqrt(sumuv))*sqrt(-2*log(sumuv))
+  out[i] <- x
+  out[i+1] <- y
+  }
+  return(out)
+}  
+
+#box meuller method
+boxmuller<-function(R){
+  out <- rep(NA, R) # initialize output vector of length R
+  
+  for (i in seq(1, R, 2)){
+
+  u1<-runif(1)
+  u2<-runif(1)
+
+  x1<-sqrt(−2*log(u1))*cos(2*pi*u2)
+  x2<-sqrt(−2*log(u1))*sin(2*pi*u2)
+  
+  out[i] <- x1
+  out[i+1] <- x2
+  }
+  return(out)
+}  
+
+
+set.seed(123)
+system.time(mysample <- newmethod(100000))
+system.time(mysample2 <- boxmuller(100000))
+plot(density(mysample),  main = "New method density and Box-Muller density (red)")
+lines(density(mysample2),col="red", lty=2)
+
+
+
+
+
+
+```
+
+b) Generalize your N(0, 1) random number generator to a N(µ, Σ) generator. Verify your
+function by simulating n = 100000 observations from a bivariate normal distribution with
+µ = (1, 3) and Σ =[2 1;1 0.5]
+
+and estimating the parameters µ and Σ from your sample.
+You can make use of the R-functions chol, colMeans and cov.
+
+
+```{r}
+#new method
+newmethod<-function(R){
+  out <- rep(NA, R) # initialize output vector of length R
+  
+  for (i in seq(1, R, 2)){
+  counter<-0
+  while(counter==0){
+  u<-runif(1,-1,1)
+  v<-runif(1,-1,1)
+  sumuv<- (u^2)+(v^2)
+  if (sumuv<=1){
+  counter<-1
+  }
+  }
+  x<-(u/sqrt(sumuv))*sqrt(-2*log(sumuv))
+  y<-(v/sqrt(sumuv))*sqrt(-2*log(sumuv))
+  out[i] <- x
+  out[i+1] <- y
+  }
+  return(out)
+}  
+```
+
+
+
+
+
+
+
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.

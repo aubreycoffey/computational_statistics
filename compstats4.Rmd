@@ -1,0 +1,456 @@
+---
+title: "compstats4"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Problem 1
+a) Show that the posterior of (σ^2| y = (y1, . . . , yn)) follows an Inverse-Gamma distribution IG(α, β), if a flat prior p(σ^2) ∝ 1 is used and determine α and β.
+
+p(θ|x) ∝ l(θ) × p(θ), the posterior is proportional to the product of the likelihood and the prior, and because we have a flat prior
+$$
+p(\sigma^2|y) \propto l(\sigma^2) × p(\sigma^2)
+\\
+p(σ^2) ∝ 1
+\\
+p(\sigma^2|y) \propto l(\sigma^2)
+$$
+The likelihood function for the multivariate normal distribution can be calculated as the product of the marginal densities. Since the terms in the sequence are independent, their joint density is equal to the product of their marginal densities. 
+$$
+p(\sigma^2|y) \propto L(\mu,\sigma^{2}:y_1,...,y_n)=\prod_{j=1}^{n}f_Y(y_j:\mu,\sigma^{2})
+\\
+=\prod_{j=1}^{n}(2\pi)^{-n/2}|\sigma^2|^{-1/2}exp(\frac{-1}{2}(y_j-\mu)^T(\sigma^2)^{-1}(y_j-\mu))
+\\
+=(2\pi)^{-n^2/2}|\sigma^2|^{-n/2}exp(\frac{-1}{2}\sum_{j=1}^{n}(y_j-\mu)^T(\sigma^2)^{-1}(y_j-\mu))
+\\
+=(2\pi)^{-n^2/2}|\sigma^2|^{-n/2}exp(\frac{-1}{2}(\sigma^{-2})n\overline{(Y-\mu)^2})
+\\
+since \space\space\space \mu=0
+\\
+p(\sigma^2|y) \propto(2\pi)^{-n^2/2}\sigma^{2(-n/2)}exp(\frac{-1}{2}(\sigma^{-2})n\overline{(Y)^2})
+$$
+The density of the inverse gamma distribution is given by
+$$
+f_{ig}(x:\alpha,\beta)=\frac{\beta^\alpha}{\Gamma(\alpha)}x^{-\alpha-1}exp(-\beta/x)
+\\
+f_{ig}(\sigma^{2}:\alpha,\beta)=\frac{\beta^\alpha}{\Gamma(\alpha)}\sigma^{2(-\alpha-1)}exp(-\beta/\sigma^{2})
+\\
+p(\sigma^2|y) \propto(2\pi)^{-n^2/2}\sigma^{2(-n/2)}exp(\frac{-1}{2}(\sigma^{-2})n\overline{(Y)^2})
+$$
+We've shown that the posterior of the variance follows an inverse gamma distribution, now we need to calculate our parameters: alpha and beta
+$$
+-\alpha-1=-n/2
+\\
+\alpha=\frac{n}{2}-1
+\\
+-\beta=\frac{-1}{2}n\overline{(Y)^2}
+\\
+\beta=\frac{n}{2}\overline{(Y)^2}
+$$
+
+b) Reparameterize the variance of the residuals as φ =1/σ^2 and assume a flat prior for φ.
+Show that in this case the posterior distribution of φ is a Gamma distribution G(α, β)
+and determine α and β.
+We will use the statement mentioned at the beginning of the problem sheet. 
+X is gamma(α,β) distributed if and only if 1/X is inv-gamma(α,β) distributed
+We know the posterior of the variance(=σ^2) is inv-gamma(α,β) distributed with the (α and β
+derived above), therefore the posterior of the variance when the variance is φ =1/(σ^2)
+will be gamma(α,β) distributed with the (α and β derived above).
+We've shown this new variance which is the inverse of the old variance will have a posterior 
+that is gamma distributed with alpha and beta values shown below
+$$
+\alpha=\frac{n}{2}-1
+\\
+\beta=\frac{n}{2}\overline{(Y)^2}
+$$
+
+c) Compare the resulting posterior distribution of σ^2 for both situations (flat prior on σ^2 vs.flat prior on φ) and interpret the results. What prior on σ^2 does a flat prior on φ imply?
+A flat prior on φ implies a flat prior on σ^2. 
+
+
+Problem 2
+a) Consider a Markov chain with states 1, 2, 3 and transition matrix
+P =
+0.5 0.4 0.1
+0.3 0.4 0.3
+0.2 0.3 0.5
+Find the stationary distribution of the Markov chain
+(note: P is defined such that the top row is all (x1,xi))
+We will solve this using the definition of a stationary distribution:
+Definition 3.6(Stationary distribution of a discrete time Markov chain with discrete
+state space). The distribution π, which satisfies
+$$
+\sum_{x\in S}\pi(x)P(x,y)=\pi(y) \space\space\space   \forall y\in S
+$$
+where, S is our set of states and S={1,2,3} and our P is given above. We will set up a system of equations, substitute the values from P and solve. 
+Let y=1
+$$
+\pi(1)P(1,1)+\pi(2)P(2,1)+\pi(3)P(3,1)=\pi(1)
+\\
+\pi(1).5+\pi(2).3+\pi(3).2=\pi(1)
+\\
+-\pi(1).5+\pi(2).3+\pi(3).2=0
+$$
+Let y=2
+$$
+\pi(1)P(1,2)+\pi(2)P(2,2)+\pi(3)P(3,2)=\pi(2)
+\\
+\pi(1).4+\pi(2).4+\pi(3).3=\pi(2)
+\\
+\pi(1).4-\pi(2).6+\pi(3).3=0
+$$
+Let y=3
+$$
+\pi(1)P(1,3)+\pi(2)P(2,3)+\pi(3)P(3,3)=\pi(3)
+\\
+\pi(1).1+\pi(2).3+\pi(3).5=\pi(3)
+\\
+\pi(1).1+\pi(2).3-\pi(3).5=0
+$$
+So our final system of equations is
+$$
+-\pi(1).5+\pi(2).3+\pi(3).2=0
+\\
+\pi(1).4-\pi(2).6+\pi(3).3=0
+\\
+\pi(1).1+\pi(2).3-\pi(3).5=0
+
+$$
+We will use the first two equations and the fact that π(1)+π(2)+π(3)=1 to solve
+```{r}
+set.seed(1357)
+solve(matrix(c(-.5, .3, .2, .4, -.6, .3, 1,1,1),nrow=3, byrow = T),c(0,0,1))
+```
+Our stationary distribution is  π={0.3387097, 0.3709677, 0.2903226}
+
+b) Simulate 100000 steps from the Markov chain given in part a), approximate the stationary
+distribution and compare it to the distribution you calculated in a). For the simulation,
+you can use any initial distribution.
+Hint: Use Algorithm 3.10 to simulate the Markov chain. To approximate the stationary
+distribution, you can calculate the relative frequencies. For more information why this
+gives a good approximation, take a look at the last point from Theorem 8.3 in the script.
+
+```{r}
+set.seed(1357)
+n<-100000
+p<-rbind(c(0.5, 0.4, 0.1),c(0.3,0.4,0.3),c(0.2, 0.3 ,0.5))
+#> x[c(1,2),c(2,3)]    # select rows 1 & 2 and columns 2 & 3
+
+#we let our inital distribution for pi be an equal probablity for each of the 3 states
+theta=c()
+initpi=c(.33333333333333,.33333333333333,.33333333333333)
+j<-runif(1)
+if (j<initpi[1]){
+  theta[1]<-1
+}else if (j>=initpi[1] && j<(initpi[1]+initpi[2])){
+  theta[1]<-2
+}else{
+  theta[1]<-3
+}
+
+for (i in 2:n) { 
+#we want p(theta,.), so we want the row of p corresponding to our theta, since theta is 1,2,3 we can also use it as our index
+  thet<-theta[i-1]
+  pthet<-p[c(thet),]
+  x<-runif(1)
+  if(x<pthet[1]){
+    theta[i]<-1
+  }
+  else if(x>=pthet[1] && x<(pthet[1]+pthet[2]))
+  {
+    theta[i]<-2
+  }
+  else{
+    theta[i]<-3
+  }
+
+
+}
+
+#barplot(theta)
+hist(theta)
+table(theta)
+
+```
+
+Based on the results from table and our n=100000 trials, the relative frequencies are
+1 - 33695/100000=.33695
+2 - 37136/100000=.37136
+3 - 29169/100000=.29169
+Our approximated stationary distribution is π={.33695, .37136, .29169}
+
+These values very closely resemble the stationary distribution values we calculated in a)
+which were π={0.3387097, 0.3709677, 0.2903226}, our approximated stationary distribution is the same up through the first two decimal places. 
+
+
+Problem 3
+First watch the YouTube video at Link:Develop Gibbs Sampler from Ben Lambert
+considering to estimate the success probability θ and unknown number of trials n based on data
+from K repeated binomial experiments.
+a) Write down the algorithm of the Gibbs sampler explicitly for this problem by using the
+priors θ ∼ U(0, 1) and n ∼ U(n1, ..., nl), where nl = nl−1 + 1 = nl−2 + 2....
+Write both versions: starting by sampling n and starting by sampling θ in step 2 in
+Algorithm 4.1 in the script.
+
+To calculate our conditional densities for n and θ, we need to determine the expression for the joint density and then remove the respective other terms (for the conditional density of n we will remove terms that only rely on θ and vice versa). Then we will sample from n and θ according to the gibbs algorithm.
+
+We have K binomial experiments, we let (X hat written below in latex) X^=(X1,X2,...,Xk) where each Xi is a binomial experiment with n trials and we let the value of Xi, represent the number of successes in the trial. Therefore our success probability θ is represented by Xi/n.
+The prior for n is given by a discrete uniform distribution from n1 to nl (n ∼ U(n1, ..., nl), where nl = nl−1 + 1 = nl−2 + 2....) and the prior for θ is given by a uniform distribution (θ ∼ U(0, 1)).
+
+We will begin by calculating the joint density for n and θ
+
+$$
+P(n,\theta|\hat X)\propto P(\hat X|n,\theta) * P(n,\theta)
+$$
+Because the two uniform distributions used for our priors don't contain any n or θ dependence we can ingore the second term above and we get for our expression
+$$
+P(n,\theta|\hat X)\propto P(\hat X|n,\theta) 
+$$
+Now to get the joint density, up to a constant of proportionality, we need to calculate our likelihood. If we assume the results of each binomial experiment are independent of one another we need to take the product of the inidividual likelihoods. We also assume that the results from each trial of the n trials in a binomial experiment are also independent from one another (i.e. the coin flips (or other binary event) that make up the n trials within one binomial experiment are all independent from one another). Given this, the best probability distribution to use for the individual likelihood is a binomial distribution. 
+
+$$
+P(\hat X|n,\theta) =\prod_{i=1}^{K}\binom{n}{x_i}\theta^{x_i}(1-\theta)^{n-x_i}
+\\
+=\theta^{\sum_{i=1}^{K}x_i}(1-\theta)^{\sum_{i=1}^{K}n-x_i}\prod_{i=1}^{K}\binom{n}{x_i}
+\\
+=\theta^{K\bar x}(1-\theta)^{nK-K\bar x}\prod_{i=1}^{K}\binom{n}{x_i}
+$$
+Now to determine our conditional densities we keep the terms relevant for the corresponding conditional densities
+$$
+P(\theta|n,\hat X)=\theta^{K\bar x}(1-\theta)^{nK-K\bar x}= beta(K\bar x+1,K(n-\bar x)+1)
+\\
+P(n|\theta,\hat X)=(1-\theta)^{nK}\prod_{i=1}^{K}\binom{n}{x_i}
+$$
+Now we will write down both versions of the gibbs sampling algorithm. 
+For both versions of the algorithms we will set our initial θ=.5 and our initial n=n1, or you can set the starting values to random values within the proper ranges
+
+We'll start with the version where we start with sampling n
+1. Set the iteration counter to j=1 and set initial values for θ and n (to .5 and n1 respectively, or random values within the range),so
+$$
+θ^{(0)}=.5 \space\space and \space\space n^{(0)}=n_1
+$$
+2. We obtain our new values for n and θ by sampling the conditional distributions. Obtain a new value for n by sampling from the conditional density for n, so we set
+$$
+n^{(j)}=P(n|\theta^{(j-1)},\hat X)
+$$
+Then we sample θ using our new value of n
+$$
+\theta^{(j)}=P(\theta|n^{(j)},\hat X)
+$$
+3. Change counter j to j + 1 and return to step 2 until convergence is reached. For a given epsilon1 and epsilon2, convergence is reached when
+$$
+||\theta^{(j)}-\theta^{(j-1)}||^{2}<\epsilon_1 \space\space\space and \space\space\space ||n^{(j)}-n^{(j-1)}||^{2}<\epsilon_2
+$$
+
+Now here is the version with sampling from θ first
+1. Set the iteration counter to j=1 and set initial values for θ and n (to .5 and n1 respectively, or random values within the range),so
+$$
+θ^{(0)}=.5 \space\space and \space\space n^{(0)}=n_1
+$$
+2. We obtain our new values for n and θ by sampling the conditional distributions. Obtain a new value for θ by sampling from the conditional density for θ, so we set
+$$
+\theta^{(j)}=P(\theta|n^{(j-1)},\hat X)
+$$
+Then we sample n using our new value of θ
+$$
+n^{(j)}=P(n|\theta^{(j)},\hat X)
+$$
+3. Change counter j to j + 1 and return to step 2 until convergence is reached. For a given epsilon1 and epsilon2, convergence is reached when
+$$
+||\theta^{(j)}-\theta^{(j-1)}||^{2}<\epsilon_1 \space\space\space and \space\space\space ||n^{(j)}-n^{(j-1)}||^{2}<\epsilon_2
+$$
+
+b) Perform the Gibbs sampler in R on the data set (6,2,4,5,3,4,5,5,4,6) with priors θ ∼ U(0, 1)
+and n discretly uniform on the set {6, 7, 8}. Use the sampler starting with θ. Output 10000 samples (n, θ) and calculate the relative frequencies of n.
+
+Here, now that we know what the possible values for n are we can create the full conditional density for 
+$$
+P(n|\theta,\hat X)=(1-\theta)^{nK}\prod_{i=1}^{K}\binom{n}{x_i}
+$$
+We do this by evaluating this density at the three possible n values and then we sum them up so we can normalize, then we are sampling from this categorical distribution
+
+
+```{r}
+set.seed(1357)
+
+#define our values for epsilon1 and epsilon2, use to determine convergence
+epsi1=.001
+epsi2=1
+
+#number of values for gibbs sampling
+number=10000
+#data
+x=c(6,2,4,5,3,4,5,5,4,6)
+#we will calculate the product of n choose xi over k for our three n values here
+library(comprehenr)
+n6p=to_vec(for(i in x) choose(6,i))
+n7p=to_vec(for(i in x) choose(7,i))
+n8p=to_vec(for(i in x) choose(8,i))
+
+n6prod=prod(n6p)
+n7prod=prod(n7p)
+n8prod=prod(n8p)
+
+
+xmean=mean(x)
+k=length(x)
+fintheta=c()
+finn=c()
+#set the inital values for theta and n
+thetain=.5
+nin=7
+theta=c()
+n=c()
+n[1]=nin
+theta[1]=thetain
+j=1
+fincount=1
+while(length(fintheta)<number){
+
+  j=j+1
+  #first we sample theta
+  theta[j]=rbeta(1,(k*xmean)+1,(k*(n[j-1]-xmean))+1)
+  
+  #then we sample n
+  #our conditional density is (1-theta)^nk * product(over k)of n choose xi
+  #our three possible n values are 6,7,8
+  n6pr=((1-theta[j])^(k*6))*n6prod
+  n7pr=((1-theta[j])^(k*7))*n7prod
+  n8pr=((1-theta[j])^(k*8))*n8prod
+  total= n6pr+n7pr+n8pr
+  prob6=n6pr/total
+  prob7=n7pr/total
+  prob8=n8pr/total
+  xp=runif(1)
+  if(xp<prob6){
+    n[j]=6
+  }
+  else if(xp>=prob6 && xp<(prob6+prob7))
+  {
+    n[j]=7
+  }
+  else{
+    n[j]=8
+  }
+  
+    
+  #check for convergence
+  if((theta[j]-theta[j-1])<epsi1 && (n[j]-n[j-1])<epsi2){
+    fintheta[fincount]=theta[j]
+    finn[fincount]=n[j]
+    fincount=fincount+1
+  }
+    
+}
+  
+
+
+outputsample=cbind(finn,fintheta)
+print(outputsample)
+table(finn)
+
+
+```
+The table for our relative frequencies of n gives (6:4563,7:3056,8:2381)
+Calculating the proportions we find
+6-.4563
+7-.3056
+8-.2381
+
+
+
+
+
+c) Perform the Gibbs sampler in R on the data set (6,2,4,5,3,4,5,5,4,6) with priors θ ∼ U(0, 1)
+and n discretly uniform on the set {4, 5, 6}. Use the sampler starting with n and note
+that it is not necessary to set an initial value for n. Output 10 samples (n, θ), print the
+categorical distribution of n for each step and explain the outcome.
+
+```{r}
+set.seed(1357)
+
+#define our values for epsilon1 and epsilon2, use to determine convergence
+epsi1=.001
+epsi2=1
+
+#number of values for gibbs sampling
+number=10
+#data
+x=c(6,2,4,5,3,4,5,5,4,6)
+#we will calculate the product of n choose xi over k for our three n values here
+library(comprehenr)
+n4p=to_vec(for(i in x) choose(4,i))
+n5p=to_vec(for(i in x) choose(5,i))
+n6p=to_vec(for(i in x) choose(6,i))
+
+n4prod=prod(n4p)
+n5prod=prod(n5p)
+n6prod=prod(n6p)
+
+
+xmean=mean(x)
+k=length(x)
+fintheta=c()
+finn=c()
+#set the inital values for theta and n
+thetain=.5
+nin=5
+theta=c()
+n=c()
+n[1]=nin
+theta[1]=thetain
+j=1
+fincount=1
+while(length(fintheta)<number){
+
+  j=j+1
+  #first we sample n
+  #our conditional density is (1-theta)^nk * product(over k)of n choose xi
+  #our three possible n values are 4,5,6
+  n4pr=((1-theta[j-1])^(k*4))*n4prod
+  n5pr=((1-theta[j-1])^(k*5))*n5prod
+  n6pr=((1-theta[j-1])^(k*6))*n6prod
+  total= n4pr+n5pr+n6pr
+  prob4=n4pr/total
+  prob5=n5pr/total
+  prob6=n6pr/total
+  probcat=c(prob4,prob5,prob6)
+  #printing the categorical distribution for each step
+  print(probcat)
+  xp=runif(1)
+  if(xp<prob4){
+    n[j]=4
+  }
+  else if(xp>=prob4 && xp<(prob4+prob5))
+  {
+    n[j]=5
+  }
+  else{
+    n[j]=6
+  }
+  #then we sample theta
+  theta[j]=rbeta(1,(k*xmean)+1,(k*(n[j]-xmean))+1)
+
+  
+    
+  #check for convergence
+  if((theta[j]-theta[j-1])<epsi1 && (n[j]-n[j-1])<epsi2){
+    fintheta[fincount]=theta[j]
+    finn[fincount]=n[j]
+    fincount=fincount+1
+  }
+    
+}
+  
+
+
+outputsample=cbind(finn,fintheta)
+print(outputsample)
+```
+
+The gibbs sampler always picks n=6 and the probability distribution always has the probability for n=6 equal to 1 and the probability for n=4 and n=5 equal to 0. This is because of the binomial coefficient in the conditional density for n. There are values in the x data set that will cause the binomial coefficient to equal 0 when n is 4 or 5. (The binomial coefficent evaluates to 0 if the the n in n choose k is smaller than the k) This causes the density to evaluate to 0, for n=4,5, since the density is a product of the binomial coefficients and the (1-θ) term. So if one of the binomial coefficients evaluates to 0 then the conditional density for that n value will evaluate to 0, which leads the normalized probability for that n value to also equal 0.
+
+

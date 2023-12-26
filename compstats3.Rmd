@@ -1,0 +1,222 @@
+---
+title: "compstats3"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Problem 1 The density of the Beta(α, β)-distribution is given by
+π(x) ∝ (x^(α−1))*((1 − x)^(β−1))
+for α > 0, β > 0 and 0 < x < 1.
+
+a) For which values of α and β can adaptive rejection sampling be used for sampling
+from π?
+If α and β are both greater than or equal to 1, then π(x) is log concave and adaptive rejection sampling can be used. This result is explained below. 
+If π(x) is log concave we can use adaptive rection sampling. π(x) is log concave if the first two derivatives of log(π(x)) exist and the second derivative is non-positive. We will calculate the first two derivatives of log(π(x))
+$$
+π(x) ∝ x^{α−1}*(1 − x)^{β−1}
+\\
+π(x) =Constant * x^{α−1}*(1 − x)^{β−1}
+\\
+log(π(x))=log(Constant) +(α−1)log(x) +(β−1)log(1-x)
+\\
+\frac{d}{dx}log(π(x))=\frac{α−1}{x} +\frac{-β+1}{1-x}
+\\
+\frac{d}{dx}(\frac{d}{dx}log(π(x)))=\frac{-α+1}{x^2} +\frac{-β+1}{(1-x)^2}
+$$
+Both the first and second derivative of log(π(x)) exist. And the second derivative is non-positive as long as α and β are both greater than or equal to 1. This is obvious since the denominator of both fractions in the second derivative will always be positive, if α=β=1 the expression will be 0 and if   α and β are greater than or equal to 1 the expression will be 0 or negative. And thus the second derivative is always non-positive when α and β are greater than or equal to 1.
+
+b) Install and load the package ars (for adaptive rejection sampling). Use the R-function
+ars of the package to generate n = 100, 000 random numbers from Beta(2, 6). Verify
+that it functions correctly by comparing the sample (kernel) density estimate to the true
+density function.
+
+```{r}
+require(ars)
+
+#sample n values from a beta(al,be) distribution using ars
+n<-100000
+al<-2
+be<-6
+f<-function(x,a,b){(a-1)*log(x)+(b-1)*log(1-x)}
+fprima<-function(x,a,b){(a-1)/x-(b-1)/(1-x)}
+mysample<-ars(n,f,fprima,x=c(0.3,0.6),m=2,lb=TRUE,xlb=0,ub=TRUE,xub=1,a=al,b=be)
+
+
+set.seed(1357)
+plot(density(mysample), main="Sample density and true density values (red)")
+x <- seq(0, 1, length=100000)
+lines(x,dbeta(x,al,be),col="red",lty=2)
+
+```
+
+
+
+Problem 2 A new do-it-yourself HIV test is claimed to have 99% sensitivity and 98%
+specificity. Suppose that 0.1% of the population are infected with HIV.
+Note: “99% sensitivity” means that P(test positive|individual is HIV positive)=0.99;
+“98% specificity” means that P(test negative|individual is HIV negative)=0.98.
+
+a) What is the probability that someone testing positive actually has HIV?
+We want the probability that the individual is HIV positive given that the test is positive. 
+So we want to calculate P(individual is HIV positive|test positive)
+We will use Bayes Theorem, which says
+$$
+p(θ|x) = \frac{(x|θ)p(θ)}{f(x)}
+$$
+P(individual is HIV positive|test positive)=(P(test positive|individual is HIV positive)*P(indidvidual is HIV positive))/P(test positive)
+P(indidvidual is HIV positive) = .1/100=.001
+P(test positive|individual is HIV positive)=.99  
+To solve this problem we need to calculate the probability of a positive test.
+We will do this using a system of equations. To start we will use abbreviations
+test positive = pos
+test negative = neg
+individual is HIV positive = H
+individual is HIV negative = nH
+We want to calculate P(H|pos)
+We'll start with expressions we know from the problem description
+P(H)=.1/100=.001
+P(nH)=1-P(H)=1-.001=.999
+P(H|pos)+P(nH|pos)=1
+P(H|neg)+P(nH|neg)=1
+P(pos|H)+P(neg|H)=1
+P(pos|nH)+P(neg|nH)=1
+P(pos|H)=.99
+P(neg|H)=1-.99=.01
+P(neg|nH)=.98
+P(pos|nH)=1-.98=.02
+We know our expression for P(H|pos)
+P(H|pos)=(P(pos|H)*P(H))/P(pos)=(.99*.001)/P(pos)=.00099/P(pos)
+Since we know P(H|pos)+P(nH|pos)=1, we can use P(nH|pos) to create a system of equations
+P(nH|pos)=(P(pos|nH)*P(nH))/P(pos)=((.02)*.999)/P(pos)=.01998/P(pos)
+P(nH|pos)=1-P(H|pos)=.01998/P(pos)
+So our two systems of equations are 
+1-P(H|pos)=.01998/P(pos)
+P(H|pos)=.00099/P(pos)
+Substituting and solving
+1-(.00099/P(pos))=.01998/P(pos)
+1=.02097/P(pos)
+P(pos)=.02097
+P(H|pos)=.00099/P(pos)=.00099/.02097=.04727030042
+
+b) What percentage of those testing positive do not have HIV?
+We want to caculate P(individual is HIV negative|test positive), we want P(nH|pos)
+P(nH|pos)=1-P(H|pos)=1-.04727030042=.95278969957
+
+
+
+Problem 3 Suppose you have i.i.d. observations y1, y2, . . . , yn from Poi(λ).
+a) What is the maximum likelihood estimate of λ?
+likelihood(λ)=l(λ)=P(data|λ), the maximum likelihood estimate is the the value of λ that maximizes 
+the likelihood. So it is the λ that maximizes P(y1, y2, . . . , yn|λ)
+Below we calculate the likelihood function
+$$
+L(y_i|\lambda)=\prod_{i=1}^{n}f(y_i|\lambda)
+\\
+=\prod_{i=1}^{n}\frac{\lambda^{y_i}e^{-\lambda}}{y_{i}!}
+\\
+$$
+Now we want to take the log of the likelihood function to get the log likelihood
+$$
+l(y_i|\lambda)=log(L(y_i|\lambda))=log(\prod_{i=1}^{n}\frac{\lambda^{y_i}e^{-\lambda}}{y_{i}!})
+\\
+=\sum_{i=1}^{n}log(\frac{\lambda^{y_i}e^{-\lambda}}{y_{i}!})
+\\
+=\sum_{i=1}^{n}log(\lambda^{y_i})+log(e^{-\lambda})-log(y_{i}!)
+\\
+=\sum_{i=1}^{n}y_{i}log(\lambda)-\lambda-log(y_{i}!)
+\\
+=-n\lambda +log(\lambda)\sum_{i=1}^{n}y_{i}-\sum_{i=1}^{n}log(y_{i}!)
+$$
+Now we want to differentiate the log likelihood with respect to λ, as we want to find the value of λ that maximizes the log likelihood.
+$$
+\frac{d}{d\lambda}l(y_i|\lambda)=\frac{d}{d\lambda}(-n\lambda +log(\lambda)\sum_{i=1}^{n}y_{i}-\sum_{i=1}^{n}log(y_{i}!))
+\\
+=-n+\frac{1}{\lambda}\sum_{i=1}^{n}y_{i}
+$$
+Now we set the derivative of the log likelihood equal to 0 and solve to find the λ that maximizes our log likelihood, this value of λ is our maximum likelihood estimate.
+$$
+\frac{d}{d\lambda}l(y_i|\lambda)=0
+\\
+-n+\frac{1}{\lambda}\sum_{i=1}^{n}y_{i}=0
+\\
+\lambda=\frac{1}{n}\sum_{i=1}^{n}y_{i}
+$$
+We see that our maximum likelihood estimator for λ is the sample mean of the yi, it is the mean of the observations from Poi(λ) 
+
+b) Show that under a G(α, β)-prior the posterior of λ is again Gamma distributed and
+determine its parameters.
+The posterior is proportional to the product of likelihood and prior. We use the probability density function for the gamma distribution for our p(λ)
+$$
+p(\lambda|y)\propto p(\lambda)*l(\lambda)
+\\
+l(\lambda)=\prod_{i=1}^{n}\frac{\lambda^{y_i}e^{-\lambda}}{y_{i}!}\propto\frac{\lambda^{n\bar y}e^{-\lambda n}}{y_{1}!y_{2}!..y_{n}!}
+\\
+p(\lambda)=\frac{\beta^{\alpha}\lambda^{\alpha-1}e^{-\beta\lambda}}{\Gamma(\alpha)}
+\\
+p(\lambda|y)\propto\frac{\lambda^{n\bar y}e^{-\lambda n}}{y_{1}!y_{2}!..y_{n}!}\frac{\beta^{\alpha}\lambda^{\alpha-1}e^{-\beta\lambda}}{\Gamma(\alpha)}
+\\
+p(\lambda|y)\propto \frac{\beta^{\alpha}}{\Gamma(\alpha)y_{1}!y_{2}!..y_{n}!}\frac{e^{-\lambda(\beta+n)}}{\lambda^{(\alpha +n\bar y)-1}}
+\\
+$$
+We have shown the posterior is gamma distributed, the new parameters are
+$$
+\hat \beta=\beta +n
+\\
+\hat \alpha=\alpha+n \bar y
+$$
+
+c) Use the R-function rpois to simulate n = 1000 observations from Poi(λ = 5). Further,
+assume a G(α = 70, β = 10)-prior on λ. Use your results from a) and b) to plot for the
+first 10, 100 and 1000 observations the prior density together with the resulting posterior
+density and the maximum likelihood estimate of λ.
+```{r}
+set.seed(1357)
+mysample <- rpois(1000, 5)
+plot(density(mysample), main = "Kernel density from rpois")
+
+#for n=10
+n<-10
+mysample10 <- rpois(n, 5)
+maxlik10<-mean(mysample10)
+#for gamma shape is alpha and scale is beta
+myprior10 <- rgamma(n,70,10)
+myposterior10<-rgamma(n,70+(n*maxlik10),10+n)
+plot(density(mysample10),col="blue", main = "N=10,Kernel density from rpois (blue), prior (red), posterior(black)")
+lines(density(myprior10),col="red")
+lines(density(myposterior10),col="black")
+
+#for n=100
+n<-100
+mysample100 <- rpois(n, 5)
+maxlik100<-mean(mysample100)
+#for gamma shape is alpha and scale is beta
+myprior100 <- rgamma(n,70,10)
+myposterior100<-rgamma(n,70+(n*maxlik100),10+n)
+plot(density(mysample100),col="blue", main = "N=100,Kernel density from rpois (blue), prior (red), posterior(black)")
+lines(density(myprior100),col="red")
+lines(density(myposterior100),col="black")
+
+#for n=1000
+n<-1000
+mysample1000 <- rpois(n, 5)
+maxlik1000<-mean(mysample1000)
+#for gamma shape is alpha and scale is beta
+myprior1000 <- rgamma(n,70,10)
+myposterior1000<-rgamma(n,70+(n*maxlik1000),10+n)
+plot(density(mysample1000),col="blue", main = "N=1000,Kernel density from rpois (blue), prior (red), posterior(black)")
+lines(density(myprior1000),col="red")
+lines(density(myposterior1000),col="black")
+
+plot(c(10,100,1000),c(maxlik10,maxlik100,maxlik1000),main = "Maximum Likelihood Estimator for n=10,100,1000")
+
+
+```
+
+
+
+

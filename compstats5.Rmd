@@ -1,0 +1,471 @@
+---
+title: "compstats5"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Problem 1
+a) Use the incomplete R-script P1 gap.R from moodle and fill in the gaps (XXX) to implement
+a Gibbs sampler which produces approximate samples from the joint posterior distribution
+of α and σ^2 of the linear regression model.
+
+```{r}
+#
+# Problem 1a) Gibbs sampler
+#
+gibbs_sampler <- function(X, Y, alpha_init = rep(0,dim(X)[2]), sigma_init = 1,
+                          delta = 10, lambda = 10, mu = rep(0,dim(X)[2]),
+                          Omega = diag(dim(X)[2]), MCsamplesize = 1000){
+  
+  n <- dim(X)[1] # sample size
+  p <- dim(X)[2]#XXX    # number of covariates in linear regression model/alpha-parameters
+  
+  # set starting values for parameter chains
+  alpha_chain     <- matrix(NA, MCsamplesize, p)
+  sigma_chain     <- rep(NA, MCsamplesize)
+  alpha_chain[1,] <- alpha_init#XXX
+  sigma_chain[1]  <- sigma_init
+  
+  # create parameter chain
+  for (i in 2:(MCsamplesize)){
+    
+    alpha_chain[i,] <- alpha_chain[i-1,]
+    sigma_chain[i]  <- sigma_chain[i-1]#XXX
+    
+    for (j in 1:p){ #XXX - for the p
+      
+      s_j <- sigma_chain[i]^(-1)*sum(X[, j]^2) #XXX
+
+      m_j <- s_j*(mu[j]*Omega[j, j]
+                  - sum(Omega[j, -j]*(alpha_chain[i, -j] - mu[-j]))
+                  + sigma_chain[i]^(-1)*sum(X[, j]*(Y - X[, -j]%*%alpha_chain[i, -j])))
+      
+      alpha_chain[i,j] <- rnorm(1, m_j, s_j)#XXX
+      
+    }
+    
+    newdelta<- delta +(n/2)
+    newlambda<- lambda +((1/2)*((Y - X[,]%*%alpha_chain[i,])^2))
+    #also try invgamma see if you get same results
+    sigma_chain[i] <- 1 / rgamma(1, newdelta, newlambda)#XXX
+  }
+  
+  return(list("alpha" = alpha_chain, "sigma2" = sigma_chain))
+  
+}
+
+
+
+
+
+```
+
+b) Apply the Gibbs sampler to the data (X, Y) generated in part b) of the R-script P1 gap.R
+using its default settings for the function’s parameters. For each estimated parameter,
+examine the resulting Markov chain and extract from it an approximate i.i.d. sample of
+the posterior distribution. For this, look at the trace-plots to find a proper burn-in-value
+and at the autocorrelation function (acf). Plot the kernel density estimation of each
+of the posterior distributions and compare them to the estimates of an ordinary linear
+regression (lm).
+
+```{r}
+
+#
+# Data for Problem 1b)
+#
+set.seed(999)
+samplesize <- 200
+dim        <- 3
+alpha_real <- c(-2, 0, 4)
+sigma_real <- 2
+X <- matrix(rnorm(samplesize*dim), nrow = samplesize, n = dim)
+Y <- as.vector(X%*%alpha_real + rnorm(samplesize, 0, sigma_real))
+
+
+solb=gibbs_sampler(X, Y, alpha_init = rep(0,dim(X)[2]), sigma_init = 1,
+                          delta = 10, lambda = 10, mu = rep(0,dim(X)[2]),
+                          Omega = diag(dim(X)[2]), MCsamplesize = 1000)
+
+sim.dat <- data.frame(Y,X)
+
+freq.mod <- lm(Y ~ X, data = sim.dat)
+summary(freq.mod)
+
+data=data.frame(solb)
+sim.dat.jags <-data
+bayes.mod.params <- c("alpha1","alpha2","alpha3","sigma2")
+bayes.mod.inits <- function(){
+ list("alpha1" = 0,"alpha2" = 0, "alpha3" = 0, "sigma2" =1)
+}
+
+bayes.mod <- function() {
+ samplesize <- 200
+ dim        <- 3
+ alpha_real <- c(-2, 0, 4)
+ sigma_real <- 2
+ X <- matrix(rnorm(samplesize*dim),samplesize, dim)
+ Y <- as.vector(X%*%alpha_real + rnorm(samplesize, 0, sigma_real))
+ x1<-X[,1]
+ x2<-X[,2]
+ x3<-X[,3]
+ for(i in 1:1000){
+ y[i] <- (alpha.1 * x1[i] + alpha.2 * x2[i]+alpha.3 * x3[i])+rnorm(1,0,sigma2)
+ }
+
+}
+
+# bayes.mod.fit <- jags(data = sim.dat.jags, inits = bayes.mod.inits,
+#   parameters.to.save = bayes.mod.params, n.chains = 4, n.iter = 1000,
+#   n.burnin = 100, model.file = gibbs_sampler(X, Y, alpha_init = rep(0,dim(X)[2]), sigma_init = 1,
+#                           delta = 10, lambda = 10, mu = rep(0,dim(X)[2]),
+#                           Omega = diag(dim(X)[2]), MCsamplesize = 1000))
+
+# bayes.mod.fit <- jags(data = sim.dat.jags, inits = bayes.mod.inits,
+#   parameters.to.save = bayes.mod.params, n.chains = 4, n.iter = 1000,
+#   n.burnin = 100, model.file = bayes.mod)
+# 
+# traceplot(bayes.mod.fit)
+# print(bayes.mod.fit)
+
+```
+
+
+
+c) Use the R-package R2jags to implement the Gibbs sampler from a) to the data from c)
+in the R-script P1 gap.R. Draw a traceplot of your output.
+Hint: Use the functions jags and traceplot.
+
+```{r}
+#
+# Data for Problem 1c)
+#
+library(R2jags)
+
+set.seed(999)
+samplesize <- 200
+dim        <- 3
+alpha_real <- c(-2, 0, 4)
+sigma_real <- 2
+X <- 0.1*matrix(rnorm(samplesize*dim), nrow = samplesize, ncol = dim) +
+     matrix(rep(rnorm(samplesize), 3), nrow = samplesize, ncol = dim)
+Y <- as.vector(X%*%alpha_real + rnorm(samplesize, 0, sigma_real))
+
+alpha_init <- rep(20,3)
+
+
+solc=gibbs_sampler(X, Y, alpha_init, sigma_init = 1,
+                          delta = 10, lambda = 10, mu = rep(0,dim(X)[2]),
+                          Omega = diag(dim(X)[2]), MCsamplesize = 1000)
+
+
+data=data.frame(solc)
+
+sim.dat <- data.frame(Y,X)
+
+freq.mod <- lm(Y ~ X, data = sim.dat)
+summary(freq.mod)
+
+data=data.frame(solc)
+sim.dat.jags <-data
+bayes.mod.params <- c("alpha1","alpha2","alpha3","sigma2")
+bayes.mod.inits <- function(){
+ list("alpha1" = 0,"alpha2" = 0, "alpha3" = 0, "sigma2" =1)
+}
+
+bayes.mod <- function() {
+ samplesize <- 200
+ dim        <- 3
+ alpha_real <- c(-2, 0, 4)
+ sigma_real <- 2
+ X <- matrix(rnorm(samplesize*dim),samplesize, dim)
+ Y <- as.vector(X%*%alpha_real + rnorm(samplesize, 0, sigma_real))
+ x1<-X[,1]
+ x2<-X[,2]
+ x3<-X[,3]
+ for(i in 1:1000){
+ y[i] <- (alpha.1 * x1[i] + alpha.2 * x2[i]+alpha.3 * x3[i])+rnorm(1,0,sigma2)
+ }
+
+}
+
+# bayes.mod.fit <- jags(data = sim.dat.jags, inits = bayes.mod.inits,
+#   parameters.to.save = bayes.mod.params, n.chains = 4, n.iter = 1000,
+#   n.burnin = 100, model.file = gibbs_sampler(X, Y, alpha_init = rep(0,dim(X)[2]), sigma_init = 1,
+#                           delta = 10, lambda = 10, mu = rep(0,dim(X)[2]),
+#                           Omega = diag(dim(X)[2]), MCsamplesize = 1000))
+
+# bayes.mod.fit <- jags(data = sim.dat.jags, inits = bayes.mod.inits,
+#   parameters.to.save = bayes.mod.params, n.chains = 4, n.iter = 1000,
+#   n.burnin = 100, model.file = bayes.mod)
+# 
+# traceplot(bayes.mod.fit)
+# print(bayes.mod.fit)
+
+
+```
+
+
+
+
+
+
+
+
+
+Problem 2 Assume that we have n observations y1, . . . , yn from a bivariate normal distribution with unknown mean   µ=(µ1, µ2) and known covariance matrix
+Σ = [σ1^2 ρσ1σ2]
+    [ρσ1σ2 σ2^2]
+Assume a uniform prior for µ.
+a) Derive a Gibbs sampler for getting samples from the posterior density π(µ1, µ2 | y1, . . . , yn).
+Hint: First, derive the full conditionals and identify their distributions.
+Second, write down a Gibbs sampling algorithm (pseudo code).
+
+To calculate our conditional densitiy for µ, we need to determine the expression for the joint density and then remove the respective other terms.
+
+We have n bivariate normal obersvations, we let Y=(Y1,...,Yn) represent the observations.
+We will begin by calculating the joint density for µ
+
+$$
+P(µ|Y)\propto P(Y|\mu) * P(\mu)
+$$
+Because the two uniform distributions used for our priors don't contain any µ dependence we can ingore the second term above and we get for our expression
+$$
+P(µ|Y)\propto P(Y|\mu) 
+$$
+Now to get the joint density, up to a constant of proportionality, we need to calculate our likelihood. If we assume the observations are independent of one another we need to take the product of the inidividual likelihoods. 
+$$
+P(Y|\mu,\Sigma) =\prod_{i=1}^{n}(2\pi)^{-1}|(\Sigma)|^{-\frac{1}{2}}exp(\frac{-1}{2}(y_j-\mu)^{T}\Sigma^{-1}(y_j-\mu))
+\\
+=(2\pi)^{-n}|(\Sigma)|^{-\frac{n}{2}}exp(\frac{-1}{2}\sum_{j=1}^{n}(y_j-\mu)^{T}\Sigma^{-1}(y_j-\mu))
+$$
+Now to determine our conditional densities we keep the terms relevant for conditional density, terms involving µ
+$$
+P(µ|Y)\propto (2\pi)^{-n}|(\Sigma)|^{-\frac{n}{2}}exp(\frac{-1}{2}\sum_{j=1}^{n}(y_j-\mu)^{T}\Sigma^{-1}(y_j-\mu))
+\\
+\propto exp(\frac{-1}{2}\sum_{j=1}^{n}(y_j-\mu)^{T}\Sigma^{-1}(y_j-\mu))
+$$
+Because in our problem, the covariance (capital sigma) is a constant and 2pi is also a constant, we can sample from a bivariate normal distribution to get out sample for µ. We do this by setting the µ equal to the negative value of the mean of Y and then our sample from mvrnorm is -µ
+
+Now we'll write the psuedocode for our algorithm
+We set our inital values for µ.
+
+1. Set the iteration counter to j=1 and set initial values for µ 
+2. We obtain our new values for µ by sampling the conditional distribution. Obtain a new value for µ by sampling from the conditional density for µ, so we set
+$$
+µ^{(j)}=P(µ|Y)
+$$
+3. Change counter j to j + 1 and return to step 2 until convergence is reached.
+
+
+b) Implement your Gibbs sampler in R. Use initial values runif(1,0,10).
+
+```{r}
+
+#3rd attempt
+library(MASS)
+Gibbs_S=function(N,sig,Y){
+  #First row corresponds to mu1, second row corresponds to mu2
+  out=matrix(NA,2,N)
+  #Set initial values
+  out[1,1]=runif(1,0,10)
+  out[2,1]=runif(1,0,10)
+  #Calculating the other samples
+  ymean=colMeans(Y)
+  for(j in 2:N){
+    #has to be negative ymean since were sampling mu not x from mvrnorm
+    out[,j]=-mvrnorm(1,-ymean,sig)
+ }
+  return(out)
+}
+
+
+#3rd attempt
+# Gibbs_S=function(N,sig,Y){
+#   #First row corresponds to mu1, second row corresponds to mu2
+#   out=matrix(NA,2,N)
+#   #Set initial values
+#   out[1,1]=runif(1,0,10)
+#   out[2,1]=runif(1,0,10)
+#   #Calculating the other samples
+#   #Y=(Y1,Y2)
+#   #mu1|mu2=mu1+((sig12)(sig22^-1)(Y2-mu2))
+#   #mu2|mu1=mu2+((sig21)(sig11^-1)(Y1-mu1))
+#   #for Y1 and Y2 we will use colmeans for Y
+#   #mu1|mu2,y=mvrnorm * mu1|mu2
+#   #mu2|mu1,y=mvrnorm * mu2|mu1
+#   ymean=colMeans(Y)
+#   for(j in 2:N){
+#     #out[,j]=
+#     out[1,j]=mvrnorm(1,ymean,sig)[1]*(out[1,j-1]+((sig[1,2])*((sig[2,2])^-1)*(ymean[2]-out[2,j-1])))
+#     out[2,j]=mvrnorm(1,ymean,sig)[2]*(out[2,j-1]+((sig[2,1])*((sig[1,1])^-1)*(ymean[1]-out[1,j])))
+#   }
+#   return(out)
+# }
+
+
+#2nd attempt
+# library(MASS)
+# Gibbs_S=function(N,sig,Y){
+#   #First row corresponds to mu1, second row corresponds to mu2
+#   out=matrix(NA,2,N)
+#   #Set initial values
+#   out[1,1]=runif(1,0,10)
+#   out[2,1]=runif(1,0,10)
+#   #Calculating the other samples
+#   for(j in 2:N){
+#     out[1,j]=mvrnorm(1,colMeans(Y),sig)[1]
+#     out[2,j]=mvrnorm(1,colMeans(Y),sig)[2]
+#   }
+#   return(out)
+# }
+
+  
+# #first attempt, keep in case
+# library(pracma)
+# Gibbs_S=function(N,sig,Y){
+#   #fun is our conditional density in terms of mu
+#   #muo=c(mu1,mu2)
+#   fun <- function(mu1,mu2) {
+#     sumvar=0
+#     for (i in dim(Y)[1]){
+#       sumvar=sumvar+((Y[i,]-c(mu1,mu2))*(sig^-1)*t(Y[i,]-c(mu1,mu2)))
+#     }
+#     func=exp((-.5)*sumvar)
+#     return(func)
+#     }
+#   #we integrate over infinity so we can get the constant of proportionality we'll use for sampling
+#   Inft=999999
+#   integdens <- integral2(fun, -Inft, Inft, -Inft,Inft)
+#   consprop=1/integdens
+#   #sampling for mu
+#   musamp=function(mu,consprop){
+#     mus=consprop*fun(mu)
+#     return(mus)
+#   }
+# 
+#   #First row corresponds to mu1, second row corresponds to mu2
+#   out=matrix(NA,2,N)
+#   #Set initial values
+#   out[1,1]=runif(1,0,10)
+#   out[2,1]=runif(1,0,10)
+#   #Calculating the other samples
+#   for(j in 2:N){
+#     out[,j]=musamp(out[,j-1], consprop)
+#   }
+#   return(out)
+# }
+
+```
+
+
+c) Use your Gibbs-Sampler with σ1 = √2, σ2 = √0.5, ρ = 0.05, n = 100. First run the
+sampler for 100 iterations (and save 100 tuples (µ1, µ2)), then do the same for 100000
+tuples.
+Hint: You can use the function mvrnorm.
+
+```{r}
+library(MASS)
+numy=100
+mu=c(6,2)
+rho=.05
+sig1=sqrt(2)
+sig2=sqrt(.5)
+sig= matrix(c(sig1^2,rho*sig1*sig2,rho*sig1*sig2,sig2^2), nrow=2,ncol=2) 
+Y=mvrnorm(numy,mu,sig)
+
+set.seed(123)
+outs100=Gibbs_S(100,sig,Y)
+outs100000=Gibbs_S(100000,sig,Y)
+# GibbsSample=Gibbs_Start_Theta(10000,c(6,2,4,5,3,4,5,5,4,6),10,6,8,ninit)
+table(outs100)
+
+```
+
+
+d) Calculate both versions (from Eq. (4.12) and (4.13)) in the script of the DIC for both
+outputs from c). Interpret the results.
+From eq 4.12 we have
+$$
+p_d= E(D(\theta))-D(E(\theta))
+$$
+Where D is, for our problem f(Y|mu) is given by the mvrnorm function 
+$$
+D(\theta)=-2ln(f(x|\theta))+c
+\\
+D(\mu)=-2ln(mvrnorm(1,\hat\mu,\Sigma))+c
+$$
+
+```{r}
+set.seed(123)
+#for 100 samples
+mumean=rowMeans(outs100)
+d2=mean(-2*log(mvrnorm(1,mumean,sig)))
+#d1 <- rep(NA, 100)
+sum=0
+count1=0
+for(i in 1:100){
+  mum=outs100[,i]
+  dd=mean(-2*log(mvrnorm(1,mum,sig)))
+  if(is.na(dd)==FALSE){
+    sum=sum+dd
+    count1=count1+1
+  }
+
+  
+}
+e1=sum/count1
+pd=e1-d2
+
+#for 100,000samples
+mumean2=rowMeans(outs100000)
+d22=mean(-2*log(mvrnorm(1,mumean2,sig)))
+#d1 <- rep(NA, 100)
+sum2=0
+count12=0
+for(i in 1:100){
+  mum2=outs100000[,i]
+  dd2=mean(-2*log(mvrnorm(1,mum2,sig)))
+  if(is.na(dd2)==FALSE){
+    sum2=sum2+dd2
+    count12=count12+1
+  }
+
+  
+}
+e12=sum2/count12
+pd2=e12-d22
+
+print(pd)
+print(pd2)
+```
+This equation for effective number of parameters, has the 100 samples having a higher pd than the 100,000. This could be interepreted to mean that the effective number of parameters increases with the number of samples.
+
+
+
+From eq 4.13 we have
+$$
+p_d= \frac{1}{2}Var(D(\theta))
+\\
+p_d= \frac{1}{2}Var(-2ln(mvrnorm(1,\hat\mu,\Sigma)))
+$$
+```{r}
+set.seed(123)
+#for 100 samples
+mumean=rowMeans(outs100)
+d=mvrnorm(1,mumean,sig)
+pd=.5*var(-2*log(d))
+
+#for 100,000samples
+mumean2=rowMeans(outs100000)
+d2=mvrnorm(1,mumean2,sig)
+pd2=.5*var(-2*log(d2))
+
+print(pd)
+print(pd2)
+```
+
+This equation for effective number of parameters, has the 100 samples having a higher pd than the 100,000. This could be interepreted to mean that the effective number of parameters increases with the number of samples.

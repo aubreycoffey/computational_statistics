@@ -1,0 +1,151 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+
+Problem 1
+generates random values from the dice random variable
+```{r}
+mydice <- function(R){
+out <- rep(NA, R) # initialize output vector of length R
+for (i in 1:R){
+va<- runif(1,1,7)
+if (va == 7){
+while(va==7){
+  va<- runif(1,1,7)
+}
+}
+var <- floor(va)
+out[i] <- var
+}
+return(out)
+}
+set.seed(1)
+system.time(mysample <- mydice(100000))
+(Freq <- table(mysample)/100000)
+(Freq <- table(mysample))
+
+barplot(Freq/100000, ylim= c(0,1),   
+main = "Observed relative frequences")
+
+
+```
+
+
+Problem 2
+generates random values from a Exp(λ)-distribution using the probability integral transform method
+
+Lemma 1.8 (Probability integral transform). If X is a continuous random variable with
+distribution function F(·) and inverse F^−1(·), then U := F(X) ∼ U[0, 1]. Therefore, if
+X := F^−1(U), then X ∼ F. The transformation U := F(X) is called the probability
+integral transform (PIT) of X
+
+Since F(x) = 1 − exp(−λx), we have F^−1(u) = −(log(1−u))/λ. Note that 1 − U has the same distribution as U, if U ∼ U[0, 1],
+therefore −(log(1−u))/λ leads to a value from Exp(λ)
+```{r}
+#our PIT generated exponential function
+myexp <- function(R,lambda){
+out <- rep(NA, R) # initialize output vector of length R
+for (i in 1:R){
+va<- runif(1)
+var<- -(log(1−va))/lambda
+out[i] <- var
+}
+return(out)
+}
+
+#generates true exponential function
+trueexp <- function(R,lambda){
+out <- rep(NA, R) # initialize output vector of length R
+for (i in 1:R){
+var<- dexp(lambda)
+out[i] <- var
+}
+return(out)
+}
+
+set.seed(1)
+lambd<- 1
+
+system.time(mysample <- myexp(100000,lambd))
+system.time(texp <- trueexp(100000,lambd))
+# Kernel Density Plot
+d <- density(mysample) # returns the density data from our PIT method  
+dt <- density(texp)#return true density function
+plot(d,ylim=c(0,12),col="red",main="Kernel Density of Exp(1)-distribution")
+lines(dt,col="blue")
+legend("topright",c("Sample","True"),fill=c("red","blue"))
+
+
+
+```
+
+Problem 3
+Let N(t) be a Poisson process with parameter λ. Using the properties (i)-(iii)
+given in the lecture (Definition 1.6 in the script) prove that N(t + s) − N(t) ∼ Poi(λs).
+Hint: The characteristic function for X ∼ Poi(λ) is φX(u) = exp(λ(exp(iu) − 1)).
+
+N(t + s) ∼ Poi(λ(t+s)) and N(t)∼ Poi(λt). Because of the second property from definition 1.6, N(s) and N(t) − N(s) are independent for 0 < s < t, the poisson processes for N(t + s) − N(t) and N(t) are independent. And the distribution for N(t + s) − N(t) depends only on s. Subtracting the distributions Poi(λ(t+s))- Poi(λt) leaves us with N(t + s) − N(t) ∼ Poi(λs).
+
+
+
+Lemma 1.7 (Generating Poisson integers based on realizations of exponential random variables). Generate independent exponential random realizations e1, e2, . . . from
+Exp(λ) i.i.d until
+e1 + · · · + ek+1 > 1 but e1 + · · · + ek ≤ 1 (1.2)
+then set x := k. Then x is a realization from Poi(λ).
+```{r}
+#I created a modifed version of the exp function for I coded this problem
+mexp <- function(lambda){
+va<- runif(1)
+var<- -(log(1−va))/lambda
+out <- var
+return(out)
+}
+#our PIT generated exponential function
+mypoi <- function(R,lambda){
+out <- rep(NA, R) # initialize output vector of length R
+for (i in 1:R){
+  sum<- 0
+  counter<- 0
+  while(sum<=1){
+    ek<-mexp(lambda)
+    sum<- sum+ek
+    counter<- counter+1
+  }
+out[i] <- counter-1
+}
+return(out)
+}
+
+
+set.seed(1)
+lambd<- 10
+
+
+system.time(mysample <- mypoi(100000,lambd))
+
+(Freq <- table(mysample))
+
+hist(mysample,freq=FALSE,main="Relative Frequencies of Poi(10) Distribution")
+hist(dpois(1:30,lambd),freq=FALSE,main="Relative Frequencies of truePoi(10) Distribution")
+
+
+
+```
+
+
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
